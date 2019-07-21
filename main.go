@@ -36,8 +36,8 @@ func main() {
 			},
 		},
 		{
-			Name:    "check",
-			Aliases: []string{"c"},
+			Name:    "check-cert",
+			Aliases: []string{"cc"},
 			Usage:   "check that a certificate has been signed by a certificate authority",
 			Flags: []cli.Flag{
 				cli.StringFlag{Name: "cert"},
@@ -50,6 +50,25 @@ func main() {
 				ok, err := actions.CheckSignature(certPath, caCertPath)
 				if err != nil {
 					return errors.New("unable to check the certificate: " + err.Error())
+				}
+				fmt.Println(ok)
+				return nil
+			},
+		},
+		{
+			Name:    "check-url",
+			Aliases: []string{"cu"},
+			Usage:   "check that a given ca cert can validate a certificate from a URL",
+			Flags: []cli.Flag{
+				cli.StringFlag{Name: "cacert"},
+			},
+			Action: func(c *cli.Context) error {
+				url := c.Args().First()
+				caCertPath := c.String("cacert")
+
+				ok, err := actions.CheckURL(url, caCertPath)
+				if err != nil {
+					return errors.New("unable to check the URL certificate: " + err.Error())
 				}
 				fmt.Println(ok)
 				return nil
