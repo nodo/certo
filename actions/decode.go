@@ -17,7 +17,7 @@ func Decode(path, format string) (string, error) {
 	block, _ := pem.Decode(certBytes)
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to parse certificate")
+		return "", errors.Wrap(err, "could not parse the certificate")
 	}
 	return renderer.New(cert, format).Render(), nil
 }
