@@ -1,4 +1,4 @@
-package actions
+package verification
 
 import (
 	"crypto/x509"
@@ -8,12 +8,33 @@ import (
 	"github.com/pkg/errors"
 )
 
-func CheckSignature(certPath, caCertPath string) (bool, error) {
-	certPEM, err := ioutil.ReadFile(certPath)
+type ValidateVerifier interface {
+	Validate() bool
+	Verify() (bool, error)
+}
+
+type Local struct {
+	CertPath   string
+	CACertPath string
+}
+
+func NewLocal(certPath, caCertPath string) ValidateVerifier {
+	return Local{
+		CertPath:   certPath,
+		CACertPath: caCertPath,
+	}
+}
+
+func (l Local) Validate() bool {
+	return l.CertPath != "" && l.CACertPath != ""
+}
+
+func (l Local) Verify() (bool, error) {
+	certPEM, err := ioutil.ReadFile(l.CertPath)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to read the certificate")
 	}
-	rootPEM, err := ioutil.ReadFile(caCertPath)
+	rootPEM, err := ioutil.ReadFile(l.CACertPath)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to read the CA certificate")
 	}

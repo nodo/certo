@@ -6,14 +6,15 @@ import (
 	"log"
 	"os"
 
-	"github.com/nodo/certo/actions"
+	"github.com/nodo/certo/decoder"
+	"github.com/nodo/certo/verification"
 	"github.com/urfave/cli"
 )
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "certo"
-	app.Usage = "Check your certificate"
+	app.Usage = "Check your certificates"
 	app.Version = "1.0.0"
 
 	app.Commands = []cli.Command{
@@ -22,12 +23,20 @@ func main() {
 			Aliases: []string{"d"},
 			Usage:   "decode the certificate metadata",
 			Flags: []cli.Flag{
+				cli.StringFlag{Name: "cert"},
 				cli.StringFlag{Name: "format"},
 			},
 			Action: func(c *cli.Context) error {
-				path := c.Args().First()
+				path := c.String("cert")
 				format := c.String("format")
-				output, err := actions.Decode(path, format)
+
+				d := decoder.New(path, format)
+				if ok := d.Validate(); !ok {
+					cli.ShowCommandHelp(c, "decode")
+					return errors.New("invalid arguments")
+				}
+
+				output, err := d.Decode()
 				if err != nil {
 					return errors.New("unable to decode the certificate: " + err.Error())
 				}
@@ -36,9 +45,9 @@ func main() {
 			},
 		},
 		{
-			Name:    "check-cert",
-			Aliases: []string{"cc"},
-			Usage:   "check that a certificate has been signed by a certificate authority",
+			Name:    "check-local",
+			Aliases: []string{"cl"},
+			Usage:   "check that a local certificate has been signed by a certificate authority",
 			Flags: []cli.Flag{
 				cli.StringFlag{Name: "cert"},
 				cli.StringFlag{Name: "cacert"},
@@ -47,30 +56,51 @@ func main() {
 				certPath := c.String("cert")
 				caCertPath := c.String("cacert")
 
-				ok, err := actions.CheckSignature(certPath, caCertPath)
+				v := verification.NewLocal(certPath, caCertPath)
+				if ok := v.Validate(); !ok {
+					cli.ShowCommandHelp(c, "check-local")
+					return errors.New("invalid arguments")
+				}
+
+				ok, err := v.Verify()
 				if err != nil {
 					return errors.New("unable to check the certificate: " + err.Error())
 				}
-				fmt.Println(ok)
+				if ok {
+					fmt.Println("Valid")
+				} else {
+					fmt.Println("*NOT* Valid")
+				}
 				return nil
 			},
 		},
 		{
-			Name:    "check-url",
-			Aliases: []string{"cu"},
+			Name:    "check-remote",
+			Aliases: []string{"cr"},
 			Usage:   "check that a given ca cert can validate a certificate from a URL",
 			Flags: []cli.Flag{
+				cli.StringFlag{Name: "url"},
 				cli.StringFlag{Name: "cacert"},
 			},
 			Action: func(c *cli.Context) error {
-				url := c.Args().First()
+				url := c.String("url")
 				caCertPath := c.String("cacert")
 
-				ok, err := actions.CheckURL(url, caCertPath)
-				if err != nil {
-					return errors.New("unable to check the URL certificate: " + err.Error())
+				v := verification.NewRemote(url, caCertPath)
+				if ok := v.Validate(); !ok {
+					cli.ShowCommandHelp(c, "check-remote")
+					return errors.New("invalid arguments")
 				}
-				fmt.Println(ok)
+
+				ok, err := v.Verify()
+				if err != nil {
+					return errors.New("unable to check the certificate: " + err.Error())
+				}
+				if ok {
+					fmt.Println("Valid")
+				} else {
+					fmt.Println("*NOT* Valid")
+				}
 				return nil
 			},
 		},

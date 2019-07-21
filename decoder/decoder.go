@@ -1,4 +1,4 @@
-package actions
+package decoder
 
 import (
 	"crypto/x509"
@@ -9,8 +9,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Decode(path, format string) (string, error) {
-	certBytes, err := ioutil.ReadFile(path)
+type Decoder struct {
+	Path   string
+	Format string
+}
+
+func New(path, format string) Decoder {
+	return Decoder{path, format}
+}
+
+func (d Decoder) Validate() bool {
+	return d.Path != ""
+}
+
+func (d Decoder) Decode() (string, error) {
+	certBytes, err := ioutil.ReadFile(d.Path)
 	if err != nil {
 		return "", errors.Wrap(err, "could not read the certificate file")
 	}
@@ -19,5 +32,5 @@ func Decode(path, format string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "could not parse the certificate")
 	}
-	return renderer.New(cert, format).Render(), nil
+	return renderer.New(cert, d.Format).Render(), nil
 }
